@@ -4,39 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meu IPTV</title>
-    <!-- Biblioteca HLS.js para reproduzir .m3u8 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body { font-family: Arial; background: #111; color: #fff; text-align: center; padding: 20px; }
         video { width: 100%; max-width: 800px; height: 450px; background: #000; border-radius: 10px; }
-        .canais { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+        .canais { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; max-height: 300px; overflow-y: auto; }
         .canais button { background: #00aaff; border: none; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
         .canais button:hover { background: #0088dd; }
+        input { padding: 10px; width: 80%; max-width: 400px; border-radius: 8px; border: none; margin-top: 10px; }
     </style>
 </head>
 <body>
     <h1>📺 Meu Player IPTV</h1>
-    <video id="videoPlayer" controls autoplay></video>
     
+    <!-- Campo para colar o link RAW da sua lista M3U -->
+    <input type="text" id="urlInput" placeholder="Cole aqui o link RAW da sua lista .m3u" style="padding:10px; width:80%; max-width:400px; border-radius:8px; border:none;">
+    <button onclick="carregarLista()" style="padding:10px 20px; background:#00ff88; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px;">Carregar Lista</button>
+    
+    <video id="videoPlayer" controls autoplay></video>
     <div class="canais" id="listaCanais"></div>
 
     <script>
-        // ATENÇÃO: Substitua essas URLs pelos links dos seus canais (ex: .m3u8)
-        const canais = [
-            { nome: "Globo", url: "URL_DO_CANAL_GLOBO.m3u8" },
-            { nome: "SBT", url: "URL_DO_CANAL_SBT.m3u8" },
-            { nome: "Record", url: "URL_DO_CANAL_RECORD.m3u8" }
-        ];
-
         const video = document.getElementById('videoPlayer');
         let hls = null;
+        let canais = [];
 
         function carregarCanal(url) {
-            if (hls) {
-                hls.destroy(); // Destroi a reprodução anterior
-            }
-            
-            // Verifica se o navegador suporta HLS nativamente (Safari)
+            if (hls) { hls.destroy(); }
             if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
             } else if (Hls.isSupported()) {
@@ -45,21 +39,57 @@
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
             } else {
-                alert('Seu navegador não suporta reprodução HLS.');
+                alert('Seu navegador não suporta HLS.');
             }
         }
 
-        // Cria os botões dinamicamente
-        const container = document.getElementById('listaCanais');
-        canais.forEach(canal => {
-            const btn = document.createElement('button');
-            btn.textContent = canal.nome;
-            btn.onclick = () => carregarCanal(canal.url);
-            container.appendChild(btn);
-        });
+        function exibirCanais() {
+            const container = document.getElementById('listaCanais');
+            container.innerHTML = '';
+            canais.forEach(canal => {
+                const btn = document.createElement('button');
+                btn.textContent = canal.nome;
+                btn.onclick = () => carregarCanal(canal.url);
+                container.appendChild(btn);
+            });
+            if (canais.length > 0) carregarCanal(canais[0].url);
+        }
 
-        // Carrega o primeiro canal automaticamente (se houver)
-        if (canais.length > 0) carregarCanal(canais[0].url);
+        // Função que baixa e parseia o arquivo .m3u de um link RAW
+        function carregarLista() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) { alert('Cole um link RAW válido!'); return; }
+
+            fetch(url)
+                .then(response => response.text())
+                .then(text => {
+                    const linhas = text.split('\n');
+                    canais = [];
+                    let nomeAtual = '';
+
+                    for (let linha of linhas) {
+                        linha = linha.trim();
+                        if (linha.startsWith('#EXTINF:')) {
+                            // Extrai o nome do canal (ex: #EXTINF:-1, Globo HD)
+                            const partes = linha.split(',');
+                            nomeAtual = partes.length > 1 ? partes.slice(1).join(',').trim() : 'Canal sem nome';
+                        } else if (linha && !linha.startsWith('#') && nomeAtual) {
+                            // A próxima linha não comentada é a URL
+                            canais.push({ nome: nomeAtual, url: linha });
+                            nomeAtual = '';
+                        }
+                    }
+
+                    if (canais.length === 0) {
+                        alert('Nenhum canal encontrado na lista. Verifique o formato do arquivo .m3u');
+                    } else {
+                        exibirCanais();
+                    }
+                })
+                .catch(err => {
+                    alert('Erro ao carregar a lista: ' + err.message);
+                });
+        }
     </script>
 </body>
 </html>
